@@ -104,14 +104,17 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 };
 
 const cacheDir = path.join(__dirname, 'caches');
+fs.mkdirSync(cacheDir, { recursive: true });
+fs.mkdirSync(VIRTUAL_ROOT, { recursive: true });
+fs.mkdirSync(VIRTUAL_ROOT_UNRESOLVED, { recursive: true });
+
 
 config.cacheStores = () => [
   new FileStore({
     root: path.join(cacheDir, '.metro-cache'),
   }),
 ];
-config.resetCache = false;
-config.fileMapCacheDirectory = cacheDir;
+
 config.reporter = {
   ...config.reporter,
   update: (event) => {
@@ -139,10 +142,7 @@ const originalGetTransformOptions = config.transformer.getTransformOptions;
 config.transformer = {
   ...config.transformer,
   getTransformOptions: async (entryPoints, options) => {
-    if (options.dev === false) { 
-      fs.rmSync(cacheDir, { recursive: true, force: true });
-      fs.mkdirSync(cacheDir);
-    }
+    
     return await originalGetTransformOptions(entryPoints, options)
   },
 }
