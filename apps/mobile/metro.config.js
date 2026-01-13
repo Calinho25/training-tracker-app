@@ -2,12 +2,29 @@ const { getDefaultConfig } = require('expo/metro-config');
 const path = require('node:path');
 const fs = require('node:fs');
 const { FileStore } = require('metro-cache');
-const { reportErrorToRemote } = require('./__create/report-error-to-remote');
-const {
-  handleResolveRequestError,
-  VIRTUAL_ROOT,
-  VIRTUAL_ROOT_UNRESOLVED,
-} = require('./__create/handle-resolve-request-error');
+let reportErrorToRemote = async () => {};
+let handleResolveRequestError = ({ error }) => {
+  throw error;
+};
+const VIRTUAL_ROOT = require('node:path').resolve(__dirname, '.virtual');
+const VIRTUAL_ROOT_UNRESOLVED = require('node:path').resolve(__dirname, '.virtual-unresolved');
+
+try {
+  ({ reportErrorToRemote } = require('./__create/report-error-to-remote'));
+} catch (e) {
+  // no-op fallback for builds
+}
+
+try {
+  ({
+    handleResolveRequestError,
+    VIRTUAL_ROOT,
+    VIRTUAL_ROOT_UNRESOLVED,
+  } = require('./__create/handle-resolve-request-error'));
+} catch (e) {
+  // fallback values above are used
+}
+
 
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
