@@ -1,32 +1,46 @@
 import { useEffect, useState } from "react";
 import { Redirect } from "expo-router";
-import { useRequireAuth } from "@/utils/auth/useAuth";
 import { ActivityIndicator, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import useAuth from "@/utils/auth/useAuth";
+
 export default function Index() {
-  const { isReady } = useRequireAuth();
+  const { isReady, isAuthenticated, signIn } = useAuth();
+
   const [consentChecked, setConsentChecked] = useState(false);
   const [consentAccepted, setConsentAccepted] = useState(false);
 
+  // If auth is ready and user is not logged in, show auth modal
   useEffect(() => {
-    const checkConsent = async () => {
+    if (!isReady) return;
+    if (!isAuthenticated) signIn();
+  }, [isReady, isAuthenticated, signIn]);
+
+  // Only check consent after user is authenticated
+  useEffect(() => {
+    if (!isReady || !isAuthenticated) return;
+
+    let cancelled = false;
+
+    (async () => {
       try {
         const consent = await AsyncStorage.getItem("@consent_accepted");
-        setConsentAccepted(consent === "true");
-      } catch (error) {
-        console.error("Error checking consent:", error);
+        if (!cancelled) setConsentAccepted(consent === "true");
+      } catch (e) {
+        console.error("Error checking consent:", e);
+        if (!cancelled) setConsentAccepted(false);
       } finally {
-        setConsentChecked(true);
+        if (!cancelled) setConsentChecked(true);
       }
+    })();
+
+    return () => {
+      cancelled = true;
     };
+  }, [isReady, isAuthenticated]);
 
-    if (isReady) {
-      checkConsent();
-    }
-  }, [isReady]);
-
-  if (!isReady || !consentChecked) {
+  if (!isReady || !isAuthenticated || !consentChecked) {
     return (
       <View
         style={{
@@ -36,14 +50,11 @@ export default function Index() {
           backgroundColor: "#000",
         }}
       >
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" />
       </View>
     );
   }
 
-  if (!consentAccepted) {
-    return <Redirect href="/consent" />;
-  }
-
+  if (!consentAccepted) return <Redirect href="/consent" />;
   return <Redirect href="/(tabs)/home" />;
 }
